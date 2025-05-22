@@ -249,10 +249,212 @@ class Grafo:
             print()
 
 
+    def _obter_caminho(self, predecessores, origem, destino):
+        caminho = []
+        while destino != -1 and destino != origem and predecessores[destino] != -1:
+            caminho.insert(0, destino)
+            destino = predecessores[destino]
+        if destino == origem:
+            caminho.insert(0, origem)
+        return caminho
+    
+    def dijkstra(self, origem):
+        if origem not in self.verticeId:
+            print("Erro: Vértice de origem não existe no grafo")
+            return
+
+        origem_idx = self.verticeId[origem]
+        distancias = [float('inf')] * self.n
+        predecessores = [-1] * self.n
+        visitados = [False] * self.n
+
+        distancias[origem_idx] = 0
+
+        for _ in range(self.n):
+            # Encontra o vértice não visitado com menor distância
+            u = -1
+            min_dist = float('inf')
+            for v in range(self.n):
+                if not visitados[v] and distancias[v] < min_dist:
+                    min_dist = distancias[v]
+                    u = v
+
+            if u == -1:
+                break
+
+            visitados[u] = True
+
+            # Atualiza as distâncias dos vizinhos
+            for v in range(self.n):
+                if self.adj[u][v] != 0 and not visitados[v]:
+                    nova_distancia = distancias[u] + self.adj[u][v]
+                    if nova_distancia < distancias[v]:
+                        distancias[v] = nova_distancia
+                        predecessores[v] = u
+
+        # Exibe os resultados
+        print("\nResultados do Algoritmo de Dijkstra:")
+        print(f"Vértice de origem: {origem}")
+        print("{:<10} {:<10} {:<15} {:<15}".format("Vértice", "Rótulo", "Distância", "Caminho"))
+        for v in range(self.n):
+            vertice_id = self.indiceVertices.get(v, v+1)
+            rotulo = self.rotulos.get(str(vertice_id), str(vertice_id))
+            caminho = self._obter_caminho(predecessores, origem_idx, v)
+            caminho_str = " -> ".join(str(self.indiceVertices.get(i, i+1)) for i in caminho)
+            print("{:<10} {:<10} {:<15} {:<15}".format(
+                vertice_id, rotulo[0] if isinstance(rotulo, tuple) else rotulo, 
+                distancias[v], caminho_str))
+
+    def coloracao_sequencial(self):
+        # Inicialização
+        classes = []  # Lista de classes de cores (cada classe é um conjunto de vértices)
+        k = 0         # Índice da classe de cor atual (começa em 0 para indexação em Python)
+
+        # Para todos os n vértices do grafo
+        for i in range(self.n):
+            vertice_adicionado = False
+            # Tenta adicionar o vértice à primeira classe possível
+            while not vertice_adicionado:
+                if k >= len(classes):
+                    # Cria uma nova classe se necessário
+                    classes.append(set())
+
+                # Verifica se algum vértice da classe atual é vizinho do vértice i
+                vizinhos = set()
+                for w in range(self.n):
+                    if self.adj[i][w] != 0 or (self.tipo < 4 and self.adj[w][i] != 0):
+                        vizinhos.add(w)
+
+                # Verifica interseção entre vizinhos e a classe atual
+                if classes[k].isdisjoint(vizinhos):
+                    classes[k].add(i)
+                    vertice_adicionado = True
+                else:
+                    k += 1  # Tenta a próxima classe
+
+            # Volta para a primeira classe para o próximo vértice
+            k = 0
+
+        # Prepara o resultado para exibição
+        resultado = [-1] * self.n
+        for cor, classe in enumerate(classes):
+            for vertice in classe:
+                resultado[vertice] = cor
+
+        # Exibe os resultados
+        print("\nColoração do Grafo (Algoritmo Sequencial):")
+        print(f"Número de cores utilizadas: {len(classes)}")
+        print("{:<10} {:<10} {:<10}".format("Vértice", "Rótulo", "Cor"))
+
+        for v in range(self.n):
+            vertice_id = self.indiceVertices.get(v, v+1)
+            rotulo = self.rotulos.get(str(vertice_id), str(vertice_id))
+            print("{:<10} {:<10} {:<10}".format(
+                vertice_id, 
+                rotulo[0] if isinstance(rotulo, tuple) else rotulo, 
+                resultado[v] + 1))  # +1 para cores começarem em 1
+
+        # Mostra as classes de cores
+        print("\nClasses de cores:")
+        for i, classe in enumerate(classes, 1):
+            vertices = []
+            for v in classe:
+                vertice_id = self.indiceVertices.get(v, v+1)
+                rotulo = self.rotulos.get(str(vertice_id), str(vertice_id))
+                vertices.append(f"{vertice_id} ({rotulo[0] if isinstance(rotulo, tuple) else rotulo})")
+            print(f"Classe {i}: {', '.join(vertices)}")
+
+    def grau_vertices(self):
+        print("\nGrau dos vértices:")
+        print("{:<10} {:<10} {:<10} {:<15}".format("Vértice", "Rótulo", "Grau", "Tipo"))
+
+        for v in range(self.n):
+            vertice_id = self.indiceVertices.get(v, v+1)
+            rotulo = self.rotulos.get(str(vertice_id), str(vertice_id))
+            grau = 0
+
+            # Calcula o grau do vértice
+            for w in range(self.n):
+                if self.adj[v][w] != 0:
+                    grau += 1
+
+            # Determina o tipo do vértice
+            if self.tipo < 4:  # Grafo não direcionado
+                tipo = "Normal"
+            else:# Grafo direcionado
+                grau_entrada = 0
+                for u in range(self.n):
+                    if self.adj[u][v] != 0:
+                        grau_entrada += 1
+
+                if grau == 0 and grau_entrada == 0:
+                    tipo = "Isolado"
+                elif grau == 0:
+                    tipo = "Sumidouro"
+                elif grau_entrada == 0:
+                    tipo = "Fonte"
+                else:
+                    tipo = "Normal"
+
+            print("{:<10} {:<10} {:<10} {:<15}".format(
+                vertice_id, rotulo[0] if isinstance(rotulo, tuple) else rotulo, 
+                grau, tipo))
+
+    def euleriano(self):
+        if self.tipo < 4:  # Grafo não direcionado
+            # Verifica se o grafo é conexo
+            visitados = [False] * self.n
+            self._dfs_nao_direcionado(0, visitados)
+            if not all(visitados):
+                print("O grafo não é euleriano: não é conexo")
+                return
+
+            # Conta vértices com grau ímpar
+            impares = 0
+            for v in range(self.n):
+                grau = 0
+                for w in range(self.n):
+                    if self.adj[v][w] != 0:
+                        grau += 1
+                if grau % 2 != 0:
+                    impares += 1
+
+            if impares == 0:
+                print("O grafo é euleriano: possui ciclo euleriano")
+            elif impares == 2:
+                print("O grafo é semi-euleriano: possui caminho euleriano mas não ciclo")
+            else:
+                print(f"O grafo não é euleriano: possui {impares} vértices com grau ímpar")
+        else:  # Grafo direcionado
+            # Verifica se o grafo é fortemente conexo
+            componentes = self.encontrar_componentes_fortemente_conexas()
+            if len(componentes) != 1:
+                print("O grafo não é euleriano: não é fortemente conexo")
+                return
+
+            # Verifica graus de entrada e saída
+            euleriano = True
+            for v in range(self.n):
+                grau_saida = 0
+                grau_entrada = 0
+                for w in range(self.n):
+                    if self.adj[v][w] != 0:
+                        grau_saida += 1
+                    if self.adj[w][v] != 0:
+                        grau_entrada += 1
+
+                if grau_saida != grau_entrada:
+                    euleriano = False
+                    break
+
+            if euleriano:
+                print("O grafo é euleriano: possui ciclo euleriano direcionado")
+            else:
+                print("O grafo não é euleriano: graus de entrada e saída não são iguais para todos os vértices")
+
 def mostrarArquivo():
     f = open('grafo.txt', 'r', encoding="utf-8")
     print("".join(f.readlines()))
-
 
 def main():
     grafo = Grafo()
@@ -268,6 +470,10 @@ def main():
     print("7. Mostrar conteúdo do arquivo")
     print("8. Mostrar grafo")
     print("9. Apresentar a conexidade do grafo e o reduzido")
+    print("10. Executar Algoritmo de Dijkstra")
+    print("11. Realizar Coloração do Grafo")
+    print("12. Mostrar Grau dos Vértices")
+    print("13. Verificar se o Grafo é Euleriano")
     print("0. Encerrar a aplicação")
 
     while True:
@@ -307,13 +513,22 @@ def main():
         elif choice == "7":
             mostrarArquivo()
         elif choice == "8":
-            grafo.show()
+            grafo.show() 
         elif choice == "9":
             grafo.conex()
+        elif choice == "10":
+            origem = int(input("Digite o vértice de origem para o algoritmo de Dijkstra: "))
+            grafo.dijkstra(origem)
+        elif choice == "11":
+            grafo.coloracao_sequencial()
+        elif choice == "12":
+            grafo.grau_vertices()
+        elif choice == "13":
+            grafo.euleriano()
         elif choice == "0":
             print("Aplicação encerrada")
             break
         else:
-            print("Escolha invalida.")
+            print("Escolha inválida.")
 
 main()
